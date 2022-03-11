@@ -1,7 +1,5 @@
 import pymongo
-import time
-import paho.mqtt.client as mqtt #manejo de conexiones mqtt
-import datetime as dt
+import termcolor
 
 miCliente = pymongo.MongoClient("mongodb://localhost:27017/")
 base_datos = miCliente["Inventario"]
@@ -10,9 +8,15 @@ lab_disponibles = base_datos["lab_disponibles"]
 global separador
 global laboratorio
 global err_counter
-err_counter = 0
 separador = "********************************************"
 
+def salir(codigo):
+    if codigo==0:
+        termcolor.cprint("Saliendo..",'green')
+        exit()
+    if codigo==1:
+        termcolor.cprint("Ejecución interrumpida por el usuario.",'yellow')
+        exit()
 def registroElemento(laboratorio,laboratorio_nombre):
     print(separador)
     print(f"Registro de elementos en laboratorio {laboratorio_nombre}")
@@ -24,81 +28,59 @@ def registroElemento(laboratorio,laboratorio_nombre):
     try:
         insertar = laboratorio.insert_one(registro)
     except Exception as e:
-        print(separador)
-        print("Ocurrió un error al insertar el elemento")
-        print(f"Error:{e}")
-        print("Intentalo de nuevo.")
-        print(separador)
+        termcolor.cprint(separador,'red')
+        termcolor.cprint("Ocurrió un error al insertar el elemento.",'red',attrs=['bold'])
+        termcolor.cprint(f"Error:{e}",'red')
+        termcolor.cprint("Intentalo de nuevo.",'yellow')
+        termcolor.cprint(separador,'red')
         registroElemento(laboratorio)
-        err_counter+=1
-        if err_counter>4:
-            salir()
-    print(separador)
-    print("Registro exitoso")
-    err_counter=0
-    print(separador)
+    termcolor.cprint(separador,'green')
+    termcolor.cprint("Registro exitoso",'green',attrs=['bold'])
+    termcolor.cprint(separador,'green')
     menu(laboratorio,laboratorio_nombre)
 def borrarElemento(laboratorio,laboratorio_nombre):
-    print(separador)
-    print(f"Borrar elemento en laboratorio {laboratorio_nombre}")
-    print(separador)
+    termcolor.cprint(separador,'blue')
+    termcolor.cprint(f"Borrar elemento en laboratorio {laboratorio_nombre}",'yellow')
+    termcolor.cprint(separador,'blue')
     num_inventario = input("Ingresa el número de inventario del artículo a borrar--->")
     query = {"num_inventario":num_inventario}
     try:
         borrar = laboratorio.delete_one(query)
     except Exception as e:
-        print(separador)
-        print("Ocurrió un error al borrar el elemento.")
-        print(f"Error:{e}")
-        print("Intentalo de nuevo.")
-        print(separador)
-        err_counter+=1
-        if err_counter>4:
-            salir()
-    print(separador)
-    print(f"{borrar.deleted_count} elementos borrados.")
-    print("Borrado exitoso.")
-    print(separador)
+        termcolor.cprint(separador,'red')
+        termcolor.cprint("Ocurrió un error al borrar el elemento.",'red',attrs=['bold'])
+        termcolor.cprint(f"Error:{e}",'red')
+        termcolor.cprint("Intentalo de nuevo.",'yellow')
+        termcolor.cprint(separador,'red')
+        borrarElemento(laboratorio,laboratorio_nombre)
+    termcolor.cprint(separador,"green")
+    termcolor.cprint(f"{borrar.deleted_count} elementos borrados.",'green',attrs=['bold'])
+    termcolor.cprint("Borrado exitoso.",'green',attrs=['bold'])
+    termcolor.cprint(separador,'green')
     menu(laboratorio,laboratorio_nombre)
 def imprimirDatabase(laboratorio,laboratorio_nombre):
     print(separador)
     print(laboratorio_nombre)
     print(separador)
     for data in laboratorio.find():
-        print(separador)
+        termcolor.cprint(separador,'magenta')
         print(f"Nombre:{data['nombre']}")
         print(f"Número de inventario:{data['num_inventario']}")
         print(f"Descripción:{data['descripcion']}")
-        print(separador)
+        termcolor.cprint(separador,'magenta')
     menu(laboratorio,laboratorio_nombre)
-def existeDatabase(db):
-    dblist=miCliente.list_database_names()
-    if db in dblist:
-        print(f"Base de datos {db} encontrada.\n")
-        return True
-    else:
-        print(f"Base de datos {db} no encontrada.\n")
-        return False
-def existeColeccion(coleccion):
-    listaColeccion = base_datos.list_collection_names()
-    if coleccion in listaColeccion:
-        print(f"Colección {coleccion} encontrada.\n")
-        return True
-    else:
-        print(f"Colección {coleccion} no existente.\n")
-        return False
 def menu(laboratorio,laboratorio_nombre):
-    print(separador)
-    print("MENU")
-    print(f"Laboratorio {laboratorio_nombre}")
-    print(separador)
-    print("""
+    termcolor.cprint(separador,'blue')
+    termcolor.cprint("MENU","yelow",attrs=['bold'])
+    termcolor.cprint(f"Laboratorio {laboratorio_nombre}",'green',attrs=['bold'])
+    termcolor.cprint(separador,'blue')
+    termcolor.cprint("""
     1.Registrar nuevo elemento
     2.Borrar elemento existente
     3.Mostrar elementos existentes
     4.Salir
-    """)
-    eleccion = input("Ingresa la opción--->")
+    """,'blue')
+    eleccion = input(termcolor.colored("Ingresa la opción--->",'green',attrs=['bold']))
     if eleccion == '1':
         registroElemento(laboratorio,laboratorio_nombre)
     if eleccion == '2':
@@ -106,19 +88,22 @@ def menu(laboratorio,laboratorio_nombre):
     if eleccion == '3':
         imprimirDatabase(laboratorio,laboratorio_nombre)
     if eleccion == '4':
-        salir()
+        salir(0)
 def defineLab(laboratorio):
     laboratorio_col = base_datos[laboratorio]
     return laboratorio_col
 
 try:
-    print(separador)
-    print(f"Sistema de administración de inventario\n")
-    print(separador)
-    laboratorio_nombre = input("Ingresa el laboratorio a administrar-->").upper()
+    termcolor.cprint(separador,'green')
+    termcolor.cprint("Sistema de administración de inventario",'magenta',attrs=['bold'])
+    termcolor.cprint(separador,'green')
+    termcolor.cprint("Laboratorios disponibles",'yellow')
+    for data in lab_disponibles.find():
+        termcolor.cprint(f"*{data['nombre']}",'blue')
+    laboratorio_nombre = input(termcolor.colored("Ingresa el laboratorio a administrar-->",'green',attrs=['bold'])).upper()
     laboratorio_col = defineLab(laboratorio_nombre)
     menu(laboratorio_col,laboratorio_nombre)
 except KeyboardInterrupt:
     print("\n")
-    print("Saliendo...\n")
+    salir(1)
 
